@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kavach — Safe Journey</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F4F9F7; --card:#FFFFFF; --ink:#17293F; --muted:#6C7C91; --line:#E9EFF3;
+    --green:#12B981; --greenDeep:#0E9E6E; --lime:#B7E44A;
+    --sky:#EAF4FF; --blue:#2F80ED; --coral:#FF6B5E; --coralDeep:#E4483A; --amber:#F6A609; --purple:#7A5CC7;
+    --shadow:0 10px 30px rgba(20,60,90,.08); --shadowSoft:0 6px 18px rgba(20,60,90,.06);
+    --font:'Nunito',system-ui,-apple-system,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:var(--font)}
+  body{background:linear-gradient(160deg,#E6F5EE,#EAF2FD 60%,#F3F0FF);min-height:100vh;display:grid;place-items:center;padding:16px}
+  .phone{width:min(390px,100vw - 20px);height:min(824px,100vh - 32px);background:var(--bg);border-radius:46px;border:7px solid #fff;
+    box-shadow:0 40px 90px rgba(30,70,110,.28),0 0 0 1px #dfe8ef;overflow:hidden;position:relative;display:flex;flex-direction:column}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:130px;height:26px;background:#fff;border-radius:0 0 18px 18px;z-index:60}
+  .sbar{height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:12px;font-weight:800;color:var(--ink);z-index:55}
+  .stage{flex:1;position:relative;overflow:hidden}
+  .screen{position:absolute;inset:0;overflow-y:auto;display:none;scrollbar-width:none;padding-bottom:88px}
+  .screen::-webkit-scrollbar{display:none}
+  .screen.on{display:block;animation:fade .32s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}}
+  .pad{padding:6px 18px 20px}
+  h1{font-size:23px;font-weight:900;color:var(--ink);letter-spacing:-.02em}
+  h2{font-size:19px;font-weight:800;color:var(--ink)}
+  .sub{color:var(--muted);font-size:13.5px;line-height:1.55;font-weight:600}
+  .tag{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+  .btn{border:none;border-radius:16px;padding:15px;font-weight:800;font-size:15px;cursor:pointer;width:100%;font-family:var(--font);transition:transform .1s}
+  .btn:active{transform:scale(.98)}
+  .btnGreen{background:var(--green);color:#fff;box-shadow:0 8px 20px rgba(18,185,129,.3)}
+  .btnGhost{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+  .btnCoral{background:var(--coral);color:#fff;box-shadow:0 8px 20px rgba(255,107,94,.3)}
+  .ob{height:100%;display:flex;flex-direction:column;padding:26px 24px 24px}
+  .obArt{flex:1;display:grid;place-items:center;padding:14px}
+  .shield{width:130px;height:130px;border-radius:38px;background:var(--lime);display:grid;place-items:center;box-shadow:0 20px 44px rgba(140,190,40,.4);position:relative}
+  .shield svg{width:68px;height:68px}
+  .shield::after{content:"";position:absolute;inset:-14px;border-radius:46px;border:2px solid rgba(140,190,40,.3);animation:ripS 2.6s ease-out infinite}
+  @keyframes ripS{from{transform:scale(.85);opacity:.8}to{transform:scale(1.15);opacity:0}}
+  .dots{display:flex;gap:7px;justify-content:center;margin:14px 0}
+  .dots i{width:7px;height:7px;border-radius:9px;background:var(--line);transition:.3s}
+  .dots i.on{width:22px;background:var(--green)}
+  .stepList{display:flex;flex-direction:column;gap:12px;margin:6px 0}
+  .step{display:flex;gap:13px;align-items:flex-start;background:#fff;border-radius:18px;padding:14px;box-shadow:var(--shadowSoft)}
+  .step .n{width:32px;height:32px;border-radius:11px;flex:none;display:grid;place-items:center;font-weight:900;font-size:14px}
+  .step b{font-size:14px;color:var(--ink);display:block;margin-bottom:2px}
+  .step p{font-size:12px;color:var(--muted);font-weight:600;line-height:1.45}
+  .field{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:10px;margin-top:10px}
+  .field input{border:none;outline:none;flex:1;font-size:15px;font-weight:700;color:var(--ink);background:none}
+  .allsetTick{width:96px;height:96px;border-radius:50%;background:var(--green);display:grid;place-items:center;box-shadow:0 16px 36px rgba(18,185,129,.4);animation:pop .5s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes pop{from{transform:scale(.3);opacity:0}}
+  .digitGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin:10px auto 4px;max-width:250px}
+  .digit{aspect-ratio:1;border-radius:50%;background:var(--bg);border:1.5px solid var(--line);font-size:22px;font-weight:900;color:var(--ink);cursor:pointer}
+  .digit:active{transform:scale(.94)}
+  .secretHint{font-size:12px;color:var(--muted);font-weight:700;margin-top:6px}
+  .homeHead{display:flex;align-items:center;gap:11px;padding:8px 18px 6px}
+  .homeHead .av{width:44px;height:44px;border-radius:14px;background:var(--lime);display:grid;place-items:center;font-weight:900;color:#2c4b00;font-size:18px}
+  .homeHead b{font-size:16px;color:var(--ink)}
+  .homeHead small{display:block;color:var(--muted);font-weight:700;font-size:12px}
+  .langChip{margin-left:auto;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:7px 11px;font-size:12px;font-weight:800;color:var(--ink);cursor:pointer}
+  .scoreCard{margin:8px 18px 0;background:#fff;border-radius:24px;box-shadow:var(--shadow);padding:22px 18px 18px;text-align:center;position:relative;overflow:hidden}
+  .scoreCard::before{content:"";position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:220px;height:120px;background:radial-gradient(closest-side,rgba(18,185,129,.14),transparent)}
+  .dial{width:150px;height:150px;margin:0 auto 8px;position:relative}
+  .dial svg{transform:rotate(-90deg)}
+  .dial .mid{position:absolute;inset:0;display:grid;place-items:center;flex-direction:column}
+  .dial .mid b{font-size:40px;font-weight:900;color:var(--ink);line-height:1}
+  .dial .mid span{font-size:11px;letter-spacing:.2em;font-weight:900;color:var(--green);margin-top:3px}
+  .scoreCard p{color:var(--muted);font-weight:700;font-size:13px;margin-top:2px}
+  .quick{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px 18px 4px}
+  .qa{background:#fff;border-radius:18px;padding:14px 4px 11px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;box-shadow:var(--shadowSoft);border:1.5px solid transparent}
+  .qa:active{transform:scale(.95)}
+  .qa.hot{border-color:rgba(18,185,129,.4)}
+  .qa .ico{width:30px;height:30px;display:grid;place-items:center}
+  .qa .ico svg{width:26px;height:26px}
+  .qa span{font-size:10.5px;font-weight:800;color:var(--ink)}
+  .peopleCard{margin:14px 18px 0;background:#fff;border-radius:20px;box-shadow:var(--shadow);padding:16px 16px 6px}
+  .pcHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .addBtn{background:var(--bg);border:1.5px solid var(--line);border-radius:11px;padding:6px 12px;font-size:11.5px;font-weight:800;color:var(--ink);cursor:pointer}
+  .personRow{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer}
+  .personRow:last-child{border:none}
+  .pav{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:15px;color:#fff;flex:none;position:relative}
+  .pav::after{content:"";position:absolute;right:-1px;bottom:-1px;width:12px;height:12px;border-radius:50%;border:2.5px solid #fff;background:var(--green)}
+  .pav.warn::after{background:var(--amber)}
+  .personRow b{font-size:14.5px;color:var(--ink)}
+  .personRow small{display:block;color:var(--muted);font-size:12px;font-weight:700}
+  .personRow .st{margin-left:auto;text-align:right;font-size:11px;font-weight:800;color:var(--muted)}
+  .aiCard{margin:14px 18px 0;background:linear-gradient(135deg,#EEF5FF,#F3FBF6);border:1.5px solid #E1EDFB;border-radius:20px;padding:16px}
+  .aiCard .tag{color:var(--blue)}
+  .aiCard p{font-size:12.8px;color:#3E5570;font-weight:600;line-height:1.55;margin-top:7px}
+  .mapBox{position:absolute;inset:0}
+  .leaflet-container{background:#e8eef2;font-family:var(--font)}
+  .searchTop{position:absolute;top:12px;left:14px;right:14px;z-index:500}
+  .searchBar{background:#fff;border-radius:16px;box-shadow:var(--shadow);padding:6px 6px 6px 14px;display:flex;align-items:center;gap:8px}
+  .searchBar .dotG{width:10px;height:10px;border-radius:50%;background:var(--blue);flex:none}
+  .searchBar input{border:none;outline:none;flex:1;font-size:14px;font-weight:700;padding:10px 0;color:var(--ink)}
+  .searchBar .go{background:var(--green);color:#fff;border:none;border-radius:12px;width:40px;height:40px;font-size:18px;cursor:pointer;flex:none}
+  .savedRow{display:flex;gap:8px;margin-top:9px}
+  .savedRow .s{background:#fff;border-radius:12px;padding:8px 13px;font-size:12px;font-weight:800;box-shadow:var(--shadow);display:flex;align-items:center;gap:6px;color:var(--ink)}
+  .savedRow .s i{width:7px;height:7px;border-radius:50%;background:var(--blue)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:500;background:#fff;border-radius:26px 26px 0 0;box-shadow:0 -10px 40px rgba(20,60,90,.14);padding:8px 20px 24px}
+  .grab{width:40px;height:5px;background:var(--line);border-radius:5px;margin:6px auto 12px}
+  .routeStat{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+  .routeStat b{font-size:26px;font-weight:900;color:var(--green)}
+  .routeStat span{color:var(--muted);font-weight:700;font-size:14px}
+  .safeChip{display:inline-flex;align-items:center;gap:6px;background:#EAF9F2;color:var(--greenDeep);font-size:12px;font-weight:800;padding:7px 12px;border-radius:11px;margin:8px 0 4px}
+  .navTop{position:absolute;top:12px;left:14px;right:14px;z-index:500;background:var(--green);color:#fff;border-radius:18px;padding:14px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px}
+  .navTop .arw{font-size:24px}.navTop b{font-size:17px;font-weight:800}.navTop small{opacity:.85;font-weight:700}
+  .crowdBadge{position:absolute;z-index:450;background:var(--blue);color:#fff;font-size:11px;font-weight:800;padding:6px 11px;border-radius:11px;box-shadow:var(--shadow);white-space:nowrap}
+  .navInfo{position:absolute;left:0;right:0;bottom:0;z-index:500;background:#fff;border-radius:24px 24px 0 0;box-shadow:0 -8px 30px rgba(20,60,90,.14);padding:14px 20px 22px}
+  .plate{display:flex;gap:8px;margin:10px 0 14px}
+  .plate input{flex:1;background:#fff;border:1.5px dashed rgba(18,185,129,.5);border-radius:14px;color:var(--ink);font-size:17px;letter-spacing:.1em;text-align:center;padding:14px 8px;text-transform:uppercase;outline:none;font-weight:800}
+  .plate button{border:none;background:#fff;border:1.5px solid var(--line);border-radius:14px;width:52px;font-size:20px;cursor:pointer}
+  .etaRow{display:flex;gap:8px;margin-bottom:14px}
+  .etaRow button{flex:1;padding:11px;border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--muted);font-size:13px;font-weight:800;cursor:pointer}
+  .etaRow button.on{border-color:var(--green);color:var(--greenDeep);background:#EAF9F2}
+  .infoCard{background:#fff;border-radius:18px;padding:15px;box-shadow:var(--shadowSoft);margin-top:4px}
+  .rideLive{display:none}.rideLive.show{display:block}
+  .countRing{font-size:38px;font-weight:900;text-align:center;color:var(--green);margin:6px 0 2px}
+  .prog{height:7px;border-radius:4px;background:var(--line);overflow:hidden;margin:12px 0 6px}
+  .prog i{display:block;height:100%;width:12%;background:var(--green);border-radius:4px;transition:width 1s linear}
+  .heatBar{display:flex;gap:3px;margin-top:10px}
+  .heatBar i{flex:1;height:30px;border-radius:6px;background:var(--green);opacity:.3}
+  .heatBar i.m{opacity:.55;background:var(--amber)} .heatBar i.h{opacity:.9;background:var(--coral)}
+  .heatLbl{display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:var(--muted);margin-top:6px}
+  .insight{display:grid;grid-template-columns:38px 1fr;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}
+  .insight:last-child{border:none}
+  .insight .ico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center}
+  .insight b{font-size:14px;color:var(--ink);display:block;margin-bottom:3px}
+  .insight p{font-size:12.3px;color:var(--muted);font-weight:600;line-height:1.5}
+  .lvl{font-size:10px;font-weight:900;margin-top:6px;display:inline-block;padding:3px 10px;border-radius:999px}
+  .lvl.g{background:#EAF9F2;color:var(--greenDeep)} .lvl.y{background:#FFF4E0;color:#B27400}
+  .lvl.r{background:#FDECEA;color:var(--coralDeep)}
+  .holdWrap{flex:1;display:grid;place-items:center}
+  #holdRing{width:180px;height:180px;border-radius:50%;background:var(--coral);display:grid;place-items:center;cursor:pointer;position:relative;box-shadow:0 16px 40px rgba(255,107,94,.4);user-select:none;animation:sosP 1.6s ease infinite}
+  @keyframes sosP{0%{box-shadow:0 0 0 0 rgba(255,107,94,.4),0 16px 40px rgba(255,107,94,.4)}100%{box-shadow:0 0 0 30px rgba(255,107,94,0),0 16px 40px rgba(255,107,94,.4)}}
+  #holdFill{position:absolute;inset:0;border-radius:50%;border:7px solid #fff;clip-path:inset(100% 0 0 0);opacity:.9}
+  .checkScreen{position:absolute;inset:0;z-index:900;background:rgba(23,41,63,.5);backdrop-filter:blur(3px);display:none;align-items:flex-end}
+  .checkScreen.on{display:flex;animation:fade .3s ease}
+  .checkCard{background:#fff;border-radius:28px 28px 0 0;width:100%;padding:24px 22px 30px;text-align:center;animation:slideUp .4s cubic-bezier(.2,.9,.3,1)}
+  @keyframes slideUp{from{transform:translateY(100%)}}
+  .checkCard .ic{width:64px;height:64px;border-radius:50%;background:var(--sky);display:grid;place-items:center;margin:0 auto 14px}
+  .checkCard h2{margin-bottom:6px}
+  .timerBar{height:6px;background:var(--line);border-radius:6px;overflow:hidden;margin:14px 0 8px}
+  .timerBar i{display:block;height:100%;background:var(--coral);width:100%;transition:width 1s linear}
+  .timer{font-size:13px;color:var(--coral);font-weight:800;margin-bottom:14px}
+  .escBanner{background:var(--coral);color:#fff;padding:15px 18px;display:flex;align-items:center;gap:10px}
+  .escBanner b{font-size:15px;font-weight:800}
+  .miniMap{height:150px;border-radius:16px;overflow:hidden;margin-bottom:12px;box-shadow:var(--shadow)}
+  .sentCard{background:#fff;border-radius:18px;padding:15px;box-shadow:var(--shadowSoft);margin-bottom:12px;display:flex;gap:13px;align-items:flex-start}
+  .sentCard .av{width:44px;height:44px;border-radius:13px;flex:none;display:grid;place-items:center;font-weight:900;font-size:16px}
+  .sentCard b{font-size:14px;color:var(--ink)}
+  .sentCard p{font-size:12.3px;color:var(--muted);font-weight:600;line-height:1.5;margin-top:2px}
+  .sentCard .ok{margin-left:auto;color:var(--green);font-size:20px}
+  .fakeCall{position:absolute;inset:0;z-index:950;background:#0d1420;display:none;flex-direction:column;align-items:center;justify-content:space-between;padding:70px 0 60px;text-align:center}
+  .fakeCall.on{display:flex}
+  .fakeCall .cav{width:110px;height:110px;border-radius:50%;background:linear-gradient(135deg,#7FB4FF,#12B981);display:grid;place-items:center;font-size:42px;font-weight:900;color:#0b1420;margin-bottom:14px}
+  .fakeCall h2{color:#fff;font-size:27px}.fakeCall p{color:#8fa0b5;font-weight:700;margin-top:4px}
+  .callBtns{display:flex;gap:70px}
+  .callBtns button{width:66px;height:66px;border-radius:50%;border:none;font-size:26px;cursor:pointer;color:#fff}
+  .cAns{background:var(--green)}.cDec{background:var(--coral)}
+  nav{position:absolute;bottom:0;left:0;right:0;height:78px;z-index:600;background:linear-gradient(180deg,transparent,#fff 42%);padding:10px 12px 16px;display:none}
+  nav.show{display:flex}
+  .navIn{flex:1;background:#fff;border-radius:22px;box-shadow:0 8px 26px rgba(20,60,90,.12);display:flex;align-items:center;justify-content:space-around;padding:0 4px}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:800;color:var(--muted);cursor:pointer;padding:8px 6px}
+  .tab svg{width:22px;height:22px}
+  .tab.on{color:var(--green)}
+  .tabSOS{background:var(--coral);width:56px;height:56px;border-radius:50%;color:#fff;justify-content:center;margin-top:-24px;box-shadow:0 8px 22px rgba(255,107,94,.5);font-size:13px;font-weight:900;gap:0}
+  .toast{position:absolute;left:50%;bottom:100px;transform:translate(-50%,16px);opacity:0;z-index:980;background:var(--ink);color:#fff;font-size:12.5px;font-weight:700;padding:11px 18px;border-radius:14px;transition:.3s;pointer-events:none;max-width:88%;text-align:center}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="sbar"><span>18:42</span><span>Kavach कवच ಕವಚ</span><span>&#9602;&#9604;&#9606; 71%</span></div>
+  <div class="stage" id="stage">
+
+    <div class="screen on" id="ob0"><div class="ob">
+      <div class="obArt"><div class="shield"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V5l7-3z" fill="#fff"/><path d="M9 12l2 2 4-4" stroke="#7FB800" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+      <div style="text-align:center"><h1 style="font-size:30px">Kavach</h1><p class="sub" style="margin-top:6px;font-size:15px">Your safety, always with you.<br>&#2310;&#2346;&#2325;&#2368; &#2360;&#2369;&#2352;&#2325;&#2381;&#2359;&#2366;, &#2361;&#2350;&#2375;&#2358;&#2366; &#2360;&#2366;&#2341;&#2404;</p></div>
+      <div class="dots" style="margin-top:22px"><i class="on"></i><i></i><i></i><i></i></div>
+      <button class="btn btnGreen" onclick="show('ob1')">Get started</button></div></div>
+
+    <div class="screen" id="ob1"><div class="ob">
+      <h1>How Kavach keeps you safe</h1><p class="sub" style="margin-top:6px">Four simple steps. No panic button needed.</p>
+      <div class="stepList" style="margin-top:16px">
+        <div class="step"><div class="n" style="background:#EAF4FF;color:var(--blue)">1</div><div><b>Set your destination</b><p>Tell Kavach where you're going. It watches your journey in real time.</p></div></div>
+        <div class="step"><div class="n" style="background:#EAF9F2;color:var(--greenDeep)">2</div><div><b>Add a trusted contact</b><p>One tap. They're alerted only if something seems wrong.</p></div></div>
+        <div class="step"><div class="n" style="background:#FFF4E0;color:var(--amber)">3</div><div><b>Safety checks on the way</b><p>Running late? Kavach quietly asks, "Are you safe?"</p></div></div>
+        <div class="step"><div class="n" style="background:#FDECEA;color:var(--coralDeep)">4</div><div><b>Auto-alert if you miss it</b><p>No reply &#8594; your live journey + location go to your contact and the nearest police station.</p></div></div>
+      </div>
+      <div class="dots"><i></i><i class="on"></i><i></i><i></i></div>
+      <button class="btn btnGreen" onclick="show('ob2')">Next</button></div></div>
+
+    <div class="screen" id="ob2"><div class="ob">
+      <h1>Add an emergency contact</h1><p class="sub" style="margin-top:6px">Notified with your live location if something goes wrong.</p>
+      <div class="field" style="margin-top:18px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="#6C7C91" stroke-width="2" stroke-linecap="round"/></svg><input value="Papa" id="cName"></div>
+      <div class="field"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 4h4l2 5-3 2a12 12 0 005 5l2-3 5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z" stroke="#6C7C91" stroke-width="2" stroke-linejoin="round"/></svg><input value="+91 90807 86908" id="cPhone"></div>
+      <button class="btn btnGhost" style="margin-top:12px" onclick="toast('Contact added')">+ Add another</button>
+      <div style="flex:1"></div><div class="dots"><i></i><i></i><i class="on"></i><i></i></div>
+      <button class="btn btnGreen" onclick="show('ob3')">Next</button></div></div>
+
+    <div class="screen" id="ob3"><div class="ob">
+      <h1>Choose your secret safe digit</h1><p class="sub" style="margin-top:6px">When Kavach asks "Are you safe?", tap <b>this digit</b> to confirm. If someone forces your phone and taps any other digit, Kavach looks normal but silently alerts your family.</p>
+      <div class="digitGrid" style="margin-top:20px" id="pickGrid"></div>
+      <p class="secretHint" id="pickHint" style="text-align:center">Tap a digit to make it your secret</p>
+      <div style="flex:1"></div><div class="dots"><i></i><i></i><i></i><i class="on"></i></div>
+      <button class="btn btnGreen" id="ob3Next" style="opacity:.4" onclick="finishOnboarding()">Finish setup</button></div></div>
+
+    <div class="screen" id="ob4"><div class="ob" style="justify-content:center;text-align:center;gap:16px">
+      <div class="allsetTick"><svg width="46" height="46" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h1>You're all set</h1><p class="sub">Kavach will watch over every journey and keep your people close.</p>
+      <button class="btn btnGreen" onclick="enterApp()">Enter Kavach</button></div></div>
+
+    <div class="screen" id="home">
+      <div class="homeHead"><div class="av">P</div><div><b id="greetName">Namaste, Priya</b><small>Indiranagar, Bengaluru</small></div><span class="langChip" id="langChip" onclick="cycleLang()">EN &#183; &#2361;&#2367; &#183; &#3221;</span></div>
+      <div class="scoreCard"><div class="dial"><svg width="150" height="150" viewBox="0 0 150 150"><circle cx="75" cy="75" r="64" fill="none" stroke="#EDF2F5" stroke-width="12"/><circle id="homeArc" cx="75" cy="75" r="64" fill="none" stroke="#12B981" stroke-width="12" stroke-linecap="round" stroke-dasharray="402" stroke-dashoffset="36"/></svg><div class="mid"><b id="homeScore">91</b><span id="homeState">SAFE</span></div></div><p id="homeDesc">Your area looks normal right now. Trail is off.</p></div>
+      <div style="margin:14px 18px 0;background:#fff;border-radius:20px;box-shadow:var(--shadow);overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px">
+          <span class="tag">My people on the map</span>
+          <button class="addBtn" onclick="navTo('trail')">Full map &#8594;</button>
+        </div>
+        <div id="homeMap" style="height:190px"></div>
+      </div>
+
+      <div class="quick">
+        <div class="qa hot" onclick="navTo('trail')"><div class="ico"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20l6-6M9 15a4 4 0 00-4 4M2.5 12.5l9 9M14 4l6 6-4 4-6-6 4-4z" stroke="#12B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span>Trail</span></div>
+        <div class="qa" onclick="navTo('ride')"><div class="ico"><svg viewBox="0 0 24 24" fill="none"><path d="M5 17V9l2-4h10l2 4v8M5 17h14M8 9h8" stroke="#F6A609" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="17" r="1.6" fill="#F6A609"/><circle cx="16" cy="17" r="1.6" fill="#F6A609"/></svg></div><span>Ride Guard</span></div>
+        <div class="qa" onclick="startFakeCall()"><div class="ico"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4h4l2 5-3 2a12 12 0 005 5l2-3 5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z" stroke="#2F80ED" stroke-width="2" stroke-linejoin="round"/></svg></div><span>Fake Call</span></div>
+        <div class="qa" onclick="navTo('patterns')"><div class="ico"><svg viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" stroke="#7A5CC7" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="#7A5CC7" stroke-width="2"/></svg></div><span>Patterns</span></div>
+      </div>
+      <div class="peopleCard"><div class="pcHead"><span class="tag">My People</span><button class="addBtn" onclick="toast('Invite sent on WhatsApp')">+ Add</button></div>
+        <div class="personRow" onclick="toast('Amma: home since 4:10 PM')"><div class="pav" style="background:#4A6FA5">A</div><div><b>Amma</b><small>At home &#183; 2h 30m</small></div><div class="st">HSR Layout<br>82%</div></div>
+        <div class="personRow" onclick="toast('Meera on her usual tuition route')"><div class="pav" style="background:#7A5CC7">M</div><div><b>Meera</b><small>Walking &#183; usual route to tuition</small></div><div class="st">on route<br>64%</div></div>
+        <div class="personRow" onclick="toast('Papa left office 40 min late')"><div class="pav warn" style="background:#B0743C">P</div><div><b>Papa</b><small>Left office late &#183; unusual by 40 min</small></div><div class="st">MG Road<br>37% &#9888;</div></div>
+      </div>
+      <div class="aiCard"><span class="tag">Kavach AI &#183; Today</span><p>All 3 of your people completed their routines safely. One heads-up: the 100 Ft Road underpass on your evening route has poor lighting after 7 PM &#8212; I'll suggest the Domlur side when you start a Trail.</p></div>
+    </div>
+
+    <div class="screen" id="trail" style="padding-bottom:0"><div style="position:relative;height:100%">
+      <div class="mapBox" id="map"></div>
+      <div class="searchTop" id="trailSearch"><div class="searchBar"><span class="dotG"></span><input id="destInput" placeholder="Where are you going?" value="Koramangala"><button class="go" onclick="planRoute()">&#8594;</button></div><div class="savedRow"><div class="s"><i></i>Home</div><div class="s"><i></i>Office</div><div class="s"><i></i>Tuition</div></div></div>
+      <div class="navTop" id="trailNavTop" style="display:none"><span class="arw">&#8593;</span><div><b>Head south</b><br><small>then right onto 5th Main Rd</small></div></div>
+      <div class="crowdBadge" id="crowdBadge" style="left:40px;bottom:170px;display:none">Many people on this route &#8212; you're safe</div>
+      <div class="sheet" id="routeSheet" style="display:none"><div class="grab"></div><div class="routeStat"><b id="rDist">16 min</b><span id="rKm">(7.7 km)</span></div><p class="sub">Fastest route now, avoids road closure on NH 44</p><div class="safeChip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 2l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V5l7-3z" stroke="#0E9E6E" stroke-width="2"/></svg>Well-lit route &#183; many people travel here</div><button class="btn btnGreen" style="margin-top:12px" onclick="startNav()">Start guarded trail</button></div>
+      <div class="navInfo" id="navInfo" style="display:none"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div><b style="font-size:20px;color:var(--green)" id="navEta">16 min</b><span class="sub" style="display:block">7.7 km &#183; arrive 19:57</span></div><div style="display:flex;gap:8px"><button class="btn btnGhost" style="width:auto;padding:12px 14px;font-size:13px" onclick="triggerCheck()">Miss check</button><button class="btn btnGreen" style="width:auto;padding:12px 14px;font-size:13px" onclick="reachSafely()">Reached &#10003;</button></div></div></div>
+      <button id="locateFab" onclick="locateMe()" style="position:absolute;right:16px;bottom:200px;z-index:500;width:48px;height:48px;border-radius:50%;background:#fff;border:none;box-shadow:var(--shadow);cursor:pointer;display:grid;place-items:center">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="#2F80ED" stroke-width="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="#2F80ED" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div></div>
+
+    <div class="screen" id="ride"><div class="pad">
+      <h1>Ride Guard</h1><p class="sub" style="margin-top:4px">Auto, cab, or bike taxi &#8212; log the vehicle, set your ETA, ride relaxed.</p>
+      <div id="rideSetup">
+        <span class="tag" style="display:block;margin-top:16px">Vehicle number</span>
+        <div class="plate"><input id="plateIn" placeholder="KA 01 AB 1234" maxlength="13"><button onclick="toast('Camera plate capture in full app')">&#128247;</button></div>
+        <span class="tag" style="display:block">Expected ride time</span>
+        <div class="etaRow" id="etaRow"><button>15m</button><button class="on">25m</button><button>40m</button><button>1 hr</button></div>
+        <button class="btn btnGreen" onclick="startRide()">Start Ride Guard</button>
+        <div class="infoCard"><span class="tag">How it protects you</span><p class="sub" style="margin-top:7px">Your circle instantly gets the vehicle number. If the ride overruns your ETA or deviates sharply, Kavach checks on you &#8212; no reply in 60s and your people are alerted with the plate, live location, and journey.</p></div>
+      </div>
+      <div class="rideLive" id="rideLive">
+        <div class="infoCard" style="text-align:center;margin-top:14px"><span class="tag">Guarding your ride</span><div class="countRing" id="rideClock">24:52</div><p class="sub" id="ridePlateShow">KA 01 AB 1234 &#183; shared with 3 people</p><div class="prog"><i id="rideProg"></i></div><p class="sub" style="font-size:12px">On the expected route &#183; Koramangala 4th Block</p></div>
+        <button class="btn btnGreen" style="margin-top:12px" onclick="endRide()">Reached safely &#10003;</button>
+        <button class="btn btnCoral" style="margin-top:10px" onclick="triggerCheck()">Something is wrong</button>
+      </div>
+    </div></div>
+
+    <div class="screen" id="patterns"><div class="pad">
+      <h1>Patterns</h1><p class="sub" style="margin-top:4px">What Kavach has learned around you and your people.</p>
+      <div class="peopleCard" style="margin:16px 0 0"><span class="tag">Your evening route &#183; crowd & light</span><div class="heatBar"><i></i><i></i><i class="m"></i><i class="m"></i><i class="h"></i><i class="h"></i><i class="m"></i><i></i></div><div class="heatLbl"><span>Home</span><span>100Ft underpass</span><span>Metro</span></div><p class="sub" style="margin-top:10px">The underpass turns low-light and low-crowd after 7 PM. 14 Kavach users flagged discomfort here this month. Suggested: Domlur side, +4 min, well lit.</p></div>
+      <div class="peopleCard" style="margin:14px 0 0">
+        <div class="insight"><div class="ico" style="background:#F1ECFB"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" stroke="#7A5CC7" stroke-width="2"/><circle cx="12" cy="12" r="2.6" stroke="#7A5CC7" stroke-width="2"/></svg></div><div><b>Papa's routine shifted</b><p>Leaving office 30&#8211;45 min later for 4 days straight. Worth a call &#8212; not an emergency.</p><span class="lvl y">unusual</span></div></div>
+        <div class="insight"><div class="ico" style="background:#FFF4E0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 17V9l2-4h10l2 4v8M5 17h14" stroke="#F6A609" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><b>Meera's tuition auto changed</b><p>New vehicle (KA 05&#8230;) three days in a row, same driver pattern. Mark as her regular ride?</p><span class="lvl g">confirm</span></div></div>
+        <div class="insight"><div class="ico" style="background:#FDECEA"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z" stroke="#E4483A" stroke-width="2"/></svg></div><div><b>Repeated presence near your PG</b><p>An anonymous device pattern appeared near your evening stop 5 times this week. No identity is collected &#8212; only that a pattern repeats. I'll alert you if it ever moves with you.</p><span class="lvl r">watching</span></div></div>
+      </div>
+    </div></div>
+
+    <div class="screen" id="sos"><div class="pad" style="height:100%;display:flex;flex-direction:column;padding-top:18px">
+      <h1 style="text-align:center">Emergency</h1><p class="sub" style="text-align:center;margin-top:4px">Hold the ring for 2 seconds. A pocket press can't misfire.</p>
+      <div class="holdWrap"><div id="holdRing"><div id="holdFill"></div><div style="color:#fff;text-align:center"><b style="font-size:28px;font-weight:900">HOLD</b><br><small style="font-weight:700" id="holdSub">&#2342;&#2348;&#2366;&#2325;&#2352; &#2352;&#2326;&#2375;&#2306;</small></div></div></div>
+      <button class="btn btnCoral" onclick="toast('Dialing 112 — All-India Emergency')">&#128222; Call 112</button>
+      <div style="display:flex;gap:10px;margin-top:10px"><button class="btn btnGhost" onclick="toast('Dialing 1091 — Women Helpline')">1091 Women</button><button class="btn btnGhost" onclick="toast('Dialing 100 — Police')">100 Police</button></div>
+    </div></div>
+
+    <div class="screen" id="escalated">
+      <div class="escBanner"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 8v5m0 3h.01M10.3 3.9L2 18a2 2 0 001.7 3h16.6a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><b id="escTitle">You didn't respond — help is on the way</b></div>
+      <div class="pad"><p class="sub" style="margin-bottom:14px">Kavach shared your full journey, live location, and route history so someone can reach you fast.</p>
+        <div class="miniMap" id="miniMap"></div>
+        <div class="sentCard"><div class="av" style="background:#EAF9F2;color:var(--greenDeep)">P</div><div><b id="sentContactName">Papa (emergency contact)</b><p>Received your live location, journey map, and a call to check on you.</p></div><span class="ok">&#10003;</span></div>
+        <div class="sentCard"><div class="av" style="background:#EAF4FF;color:var(--blue)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V5l7-3z" stroke="#2F80ED" stroke-width="2"/></svg></div><div><b id="policeName">Finding nearest police&#8230;</b><p id="policeDetail">Locating the closest station and sending them your details.</p></div><span class="ok" id="policeOk" style="opacity:.3">&#10003;</span></div>
+        <button class="btn btnGreen" style="margin-top:6px" onclick="markSafe()">I'm safe now — I responded</button>
+        <button class="btn btnCoral" style="margin-top:10px" onclick="toast('Calling 112 with your live location')">Call 112 now</button>
+      </div>
+    </div>
+
+    <div class="screen" id="recap">
+      <div class="pad">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <div style="width:40px;height:40px;border-radius:13px;background:#EAF9F2;display:grid;place-items:center">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#0E9E6E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div><h1 style="font-size:20px">You reached safely</h1><p class="sub" style="font-size:12.5px">Journey complete</p></div>
+        </div>
+        <div class="miniMap" id="recapMap" style="height:200px;margin-top:14px"></div>
+        <div class="infoCard" style="display:flex;justify-content:space-around;text-align:center">
+          <div><b style="font-size:20px;color:var(--green)" id="recapDist">7.7 km</b><p class="sub" style="font-size:11px">distance</p></div>
+          <div><b style="font-size:20px;color:var(--green)" id="recapTime">16 min</b><p class="sub" style="font-size:11px">time</p></div>
+          <div><b style="font-size:20px;color:var(--green)">Safe</b><p class="sub" style="font-size:11px">status</p></div>
+        </div>
+        <div class="aiCard" style="margin:14px 0 0">
+          <span class="tag" style="color:var(--greenDeep)">&#128274; Private to you</span>
+          <p>This journey is stored only on your device and visible only to you. Your family did <b>not</b> see this route. Kavach shares your live location and traveled route with your emergency contact <b>only if you're in trouble</b>.</p>
+        </div>
+        <button class="btn btnGreen" style="margin-top:14px" onclick="show('home')">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="checkScreen" id="check"><div class="checkCard">
+    <div class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M12 2l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V5l7-3z" stroke="#2F80ED" stroke-width="2"/><path d="M12 8v4m0 3h.01" stroke="#2F80ED" stroke-width="2" stroke-linecap="round"/></svg></div>
+    <h2 id="checkTitle">Are you safe?</h2><p class="sub" id="checkBody">We noticed a delay. Tap your secret safe digit to confirm.</p>
+    <div class="timerBar"><i id="checkTimerBar"></i></div><p class="timer" id="checkTimer">Auto-alert in 10s if no response</p>
+    <div class="digitGrid" id="checkDigits"></div>
+    <button class="btn btnCoral" style="margin-top:14px" onclick="escalateNow('need_help')">Need help now</button>
+  </div></div>
+
+  <div class="fakeCall" id="fakeCall">
+    <div style="text-align:center"><div class="cav">A</div><h2>Amma</h2><p>mobile &#183; calling&#8230;</p></div>
+    <div class="callBtns"><button class="cDec" onclick="endFakeCall()">&#10005;</button><button class="cAns" onclick="toast('Speak naturally — you now have a reason to step away');endFakeCall()">&#9742;</button></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <nav id="bottomNav"><div class="navIn">
+    <div class="tab on" data-go="home" onclick="navTo('home')"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8M5 10v10h14V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Home</div>
+    <div class="tab" data-go="trail" onclick="navTo('trail')"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20l6-6M9 15a4 4 0 00-4 4M14 4l6 6-4 4-6-6 4-4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Trail</div>
+    <div class="tab tabSOS" onclick="navTo('sos')">SOS</div>
+    <div class="tab" data-go="ride" onclick="navTo('ride')"><svg viewBox="0 0 24 24" fill="none"><path d="M5 17V9l2-4h10l2 4v8M5 17h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="17" r="1.5" fill="currentColor"/><circle cx="16" cy="17" r="1.5" fill="currentColor"/></svg>Ride</div>
+    <div class="tab" data-go="patterns" onclick="navTo('patterns')"><svg viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.6" stroke="currentColor" stroke-width="2"/></svg>Patterns</div>
+  </div></nav>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let toastT;
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
+const APP=['home','trail','ride','patterns','sos','escalated'];
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));$(id).classList.add('on');
+  $('bottomNav').classList.toggle('show',APP.includes(id));
+  document.querySelectorAll('nav .tab').forEach(t=>t.classList.toggle('on',t.dataset.go===id));}
+function enterApp(){show('home');initHomeMap();}
+function navTo(id){show(id);if(id==='trail')initTrail();if(id==='home')setTimeout(()=>HOMEMAP&&HOMEMAP.invalidateSize(),120);}
+let secretDigit=null;
+(function(){const g=$('pickGrid');[1,2,3,4,5,6,7,8,9].forEach(d=>{const b=document.createElement('button');b.className='digit';b.textContent=d;
+  b.onclick=()=>{secretDigit=d;[...g.children].forEach(c=>{c.style.borderColor='var(--line)';c.style.background='var(--bg)';});
+  b.style.borderColor='var(--green)';b.style.background='#EAF9F2';$('pickHint').innerHTML='Your secret digit is <b>'+d+'</b>. Remember it well.';$('ob3Next').style.opacity='1';};g.appendChild(b);});})();
+function finishOnboarding(){if(secretDigit===null){toast('Pick your secret digit first');return;}show('ob4');}
+const START=[12.9784,77.6408],DEST=[12.9352,77.6245];
+let MAP,MINI,meMarker,routeLine,navMe,ROUTE=null;
+const tileURL='https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+function tiles(){return L.tileLayer(tileURL,{maxZoom:19,attribution:'© OpenStreetMap © CARTO'});}
+function meIcon(c){return L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:'<div style="width:20px;height:20px;border-radius:50%;background:'+c+';border:4px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3)"></div>'});}
+function pinIcon(c){return L.divIcon({className:'',iconSize:[30,40],iconAnchor:[15,38],html:'<svg width="30" height="40" viewBox="0 0 30 40"><path d="M15 0C7 0 1 6 1 14c0 10 14 26 14 26s14-16 14-26C29 6 23 0 15 0z" fill="'+c+'"/><circle cx="15" cy="14" r="5" fill="#fff"/></svg>'});}
+let HOMEMAP=null;
+const PEOPLE=[
+  {name:'You',lat:12.9784,lng:77.6408,color:'#12B981',me:true},
+  {name:'Amma',lat:12.9116,lng:77.6474,color:'#4A6FA5'},
+  {name:'Meera',lat:12.9600,lng:77.6380,color:'#7A5CC7'},
+  {name:'Papa',lat:12.9756,lng:77.6068,color:'#B0743C',warn:true}
+];
+function personIcon(p){
+  const dot='width:16px;height:16px;border-radius:50%;background:'+p.color+';border:3px solid #fff;box-shadow:0 2px 7px rgba(0,0,0,.35)';
+  const warn=p.warn?'<span style="position:absolute;top:-4px;right:-4px;width:9px;height:9px;border-radius:50%;background:#F6A609;border:2px solid #fff"></span>':'';
+  const label='<span style="position:absolute;left:50%;top:20px;transform:translateX(-50%);background:#fff;color:#17293F;font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.15);white-space:nowrap;font-family:Nunito,sans-serif">'+p.name+'</span>';
+  return L.divIcon({className:'',iconSize:[16,16],iconAnchor:[8,8],html:'<div style="position:relative"><span style="display:block;'+dot+'"></span>'+warn+label+(p.me?'<span style="position:absolute;inset:-8px;border-radius:50%;border:2px solid '+p.color+';opacity:.5;animation:ripS 2.4s ease-out infinite"></span>':'')+'</div>'});
+}
+function initHomeMap(){
+  setTimeout(async()=>{
+    if(HOMEMAP){HOMEMAP.invalidateSize();return;}
+    const my=await getMyLocation();
+    if(my){PEOPLE[0].lat=my[0];PEOPLE[0].lng=my[1];MYSTART=my;START[0]=my[0];START[1]=my[1];}
+    HOMEMAP=L.map('homeMap',{zoomControl:false,attributionControl:false});
+    L.tileLayer(tileURL,{maxZoom:19}).addTo(HOMEMAP);
+    const grp=[];
+    PEOPLE.forEach(p=>{const m=L.marker([p.lat,p.lng],{icon:personIcon(p)}).addTo(HOMEMAP);
+      m.on('click',()=>toast(p.name+(p.warn?' — routine unusual today':p.me?' — this is your live location':' — safe')));grp.push([p.lat,p.lng]);});
+    HOMEMAP.fitBounds(grp,{padding:[36,36]});
+  },160);
+}
+let MYSTART=START.slice(), JOURNEY_PATH=[], geoWatch=null;
+function getMyLocation(){return new Promise(res=>{
+  if(!navigator.geolocation)return res(null);
+  navigator.geolocation.getCurrentPosition(
+    p=>res([p.coords.latitude,p.coords.longitude]),
+    ()=>res(null),{enableHighAccuracy:true,timeout:6000,maximumAge:30000});
+});}
+function locateMe(){
+  if(!MAP){toast('Open Trail first');return;}
+  toast('Finding your location…');
+  getMyLocation().then(loc=>{
+    if(!loc){toast('Location unavailable — using demo start');return;}
+    MYSTART=loc;
+    L.marker(loc,{icon:meIcon('#2F80ED')}).addTo(MAP);
+    MAP.setView(loc,16);
+    toast('This is your live location');
+  });
+}
+function reachSafely(){
+  clearInterval(navTimer);
+  if(geoWatch){navigator.geolocation.clearWatch(geoWatch);geoWatch=null;}
+  const path=JOURNEY_PATH.length>1?JOURNEY_PATH:(ROUTE?ROUTE.coords:[MYSTART,DEST]);
+  $('recapDist').textContent=(ROUTE?ROUTE.km:'7.7')+' km';
+  $('recapTime').textContent=(ROUTE?ROUTE.min:16)+' min';
+  show('recap');
+  setTimeout(()=>{
+    let m=L.map('recapMap',{zoomControl:false,attributionControl:false,dragging:false});
+    L.tileLayer(tileURL,{maxZoom:19}).addTo(m);
+    const line=L.polyline(path,{color:'#12B981',weight:6}).addTo(m);
+    L.marker(path[0],{icon:meIcon('#2F80ED')}).addTo(m);
+    L.marker(path[path.length-1],{icon:pinIcon('#12B981')}).addTo(m);
+    m.fitBounds(line.getBounds(),{padding:[30,30]});
+  },160);
+}
+function initTrail(){resetTrailUI();setTimeout(()=>{if(!MAP){MAP=L.map('map',{zoomControl:false,attributionControl:false}).setView(START,15);tiles().addTo(MAP);meMarker=L.marker(START,{icon:meIcon('#2F80ED')}).addTo(MAP);}MAP.invalidateSize();},140);}
+function resetTrailUI(){$('trailSearch').style.display='block';$('routeSheet').style.display='none';$('navInfo').style.display='none';$('trailNavTop').style.display='none';$('crowdBadge').style.display='none';}
+async function getRoute(){try{const u='https://router.project-osrm.org/route/v1/driving/'+START[1]+','+START[0]+';'+DEST[1]+','+DEST[0]+'?overview=full&geometries=geojson';const r=await fetch(u);const j=await r.json();return {coords:j.routes[0].geometry.coordinates.map(p=>[p[1],p[0]]),km:(j.routes[0].distance/1000).toFixed(1),min:Math.round(j.routes[0].duration/60)};}catch(e){return {coords:[START,DEST],km:'7.7',min:16};}}
+async function planRoute(){if(!MAP)initTrail();$('trailSearch').style.display='block';if(!ROUTE)ROUTE=await getRoute();if(routeLine)MAP.removeLayer(routeLine);routeLine=L.polyline(ROUTE.coords,{color:'#12B981',weight:6,opacity:.9}).addTo(MAP);L.marker(DEST,{icon:pinIcon('#FF6B5E')}).addTo(MAP);MAP.fitBounds(routeLine.getBounds(),{padding:[60,60]});$('rDist').textContent=ROUTE.min+' min';$('rKm').textContent='('+ROUTE.km+' km)';$('routeSheet').style.display='block';}
+let navTimer=null,navIdx=0;
+async function startNav(){if(!ROUTE)ROUTE=await getRoute();$('routeSheet').style.display='none';$('trailSearch').style.display='none';$('trailNavTop').style.display='flex';$('crowdBadge').style.display='block';$('navInfo').style.display='block';if(routeLine)MAP.removeLayer(routeLine);routeLine=L.polyline(ROUTE.coords,{color:'#2F80ED',weight:7,opacity:.9}).addTo(MAP);navMe=L.marker(ROUTE.coords[0],{icon:meIcon('#12B981')}).addTo(MAP);MAP.setView(ROUTE.coords[0],16);navIdx=0;JOURNEY_PATH=[ROUTE.coords[0]];clearInterval(navTimer);
+  if(navigator.geolocation){geoWatch=navigator.geolocation.watchPosition(p=>{JOURNEY_PATH.push([p.coords.latitude,p.coords.longitude]);},()=>{},{enableHighAccuracy:true});}
+  navTimer=setInterval(()=>{navIdx+=Math.max(1,Math.floor(ROUTE.coords.length/40));if(navIdx>=ROUTE.coords.length){clearInterval(navTimer);return;}navMe.setLatLng(ROUTE.coords[navIdx]);MAP.panTo(ROUTE.coords[navIdx]);JOURNEY_PATH.push(ROUTE.coords[navIdx]);$('navEta').textContent=Math.round(ROUTE.min*(1-navIdx/ROUTE.coords.length))+' min';},900);toast('Guarded trail started · this journey is private to you');}
+let rideT=null,rideSecs=25*60;
+document.querySelectorAll('#etaRow button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#etaRow button').forEach(x=>x.classList.remove('on'));b.classList.add('on');rideSecs=b.textContent.includes('hr')?3600:parseInt(b.textContent)*60;});
+function startRide(){const plate=($('plateIn').value||'KA 01 AB 1234').toUpperCase();$('ridePlateShow').textContent=plate+' · shared with 3 people';$('rideSetup').style.display='none';$('rideLive').classList.add('show');toast('Ride Guard on — plate sent to your people');let left=rideSecs,total=rideSecs;clearInterval(rideT);rideT=setInterval(()=>{left--;$('rideClock').textContent=String(Math.floor(left/60)).padStart(2,'0')+':'+String(left%60).padStart(2,'0');$('rideProg').style.width=(100*(1-left/total))+'%';if(left<=0){clearInterval(rideT);toast('ETA passed — checking on you…');triggerCheck();}},1000);}
+function endRide(){clearInterval(rideT);$('rideSetup').style.display='block';$('rideLive').classList.remove('show');toast('Marked safe · your people notified ✓');}
+function startFakeCall(){toast('Fake call in 5 seconds…');setTimeout(()=>$('fakeCall').classList.add('on'),5000);}
+function endFakeCall(){$('fakeCall').classList.remove('on');}
+let checkT=null;
+function buildCheckDigits(){const set=new Set([secretDigit==null?7:secretDigit]);while(set.size<6)set.add(Math.floor(Math.random()*10));const arr=[...set].sort(()=>Math.random()-.5);const g=$('checkDigits');g.innerHTML='';arr.forEach(d=>{const b=document.createElement('button');b.className='digit';b.textContent=d;b.onclick=()=>answerCheck(d);g.appendChild(b);});}
+function triggerCheck(){buildCheckDigits();$('check').classList.add('on');let left=10;$('checkTimerBar').style.width='100%';$('checkTimer').textContent='Auto-alert in '+left+'s if no response';clearInterval(checkT);checkT=setInterval(()=>{left--;$('checkTimerBar').style.width=(left*10)+'%';$('checkTimer').textContent='Auto-alert in '+left+'s if no response';if(left<=0){clearInterval(checkT);$('check').classList.remove('on');escalateNow('no_response');}},1000);}
+function answerCheck(d){clearInterval(checkT);$('check').classList.remove('on');toast('Glad you\u2019re safe. Journey continues.');if(d!==(secretDigit==null?7:secretDigit))escalateNow('duress');}
+async function escalateNow(reason){clearInterval(checkT);clearInterval(navTimer);clearInterval(rideT);if(geoWatch){navigator.geolocation.clearWatch(geoWatch);geoWatch=null;}$('check').classList.remove('on');$('sentContactName').textContent=($('cName').value||'Papa')+' (emergency contact)';$('escTitle').textContent=reason==='duress'?'Silent alert sent — help is on the way':reason==='need_help'?'Help requested — your people are notified':'You didn\u2019t respond — help is on the way';show('escalated');setTimeout(async()=>{if(!ROUTE)ROUTE=await getRoute();if(!MINI){MINI=L.map('miniMap',{zoomControl:false,attributionControl:false,dragging:false});L.tileLayer(tileURL,{maxZoom:19}).addTo(MINI);}MINI.invalidateSize();const done=JOURNEY_PATH.length>1?JOURNEY_PATH:ROUTE.coords.slice(0,Math.max(2,navIdx||Math.floor(ROUTE.coords.length/2)));const line=L.polyline(done,{color:'#FF6B5E',weight:6}).addTo(MINI);const here=done[done.length-1];L.marker(here,{icon:meIcon('#FF6B5E')}).addTo(MINI);MINI.fitBounds(line.getBounds(),{padding:[30,30]});findPolice(here);},160);}
+async function findPolice(here){try{const q='[out:json][timeout:10];node["amenity"="police"](around:4000,'+here[0]+','+here[1]+');out body 3;';const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:q});const j=await r.json();const n=(j.elements||[])[0];if(n){$('policeName').textContent=(n.tags&&n.tags.name)?n.tags.name:'Nearest police station';$('policeDetail').textContent='Sent your live location and journey map. '+((n.tags&&n.tags.phone)?('Station: '+n.tags.phone):'Call 112 to reach them with your location.');L.marker([n.lat,n.lon],{icon:pinIcon('#2F80ED')}).addTo(MINI);$('policeOk').style.opacity='1';return;}}catch(e){}$('policeName').textContent='Indiranagar Police Station';$('policeDetail').textContent='Sent your live location and journey map. Emergency line: 112.';$('policeOk').style.opacity='1';}
+function markSafe(){toast('Marked safe · your people have been updated');show('home');}
+let holdT=null,holdStart=0;const ring=$('holdRing'),fill=$('holdFill');
+ring.addEventListener('pointerdown',e=>{e.preventDefault();holdStart=Date.now();holdT=setInterval(()=>{const p=Math.min((Date.now()-holdStart)/2000,1);fill.style.clipPath='inset('+(100-p*100)+'% 0 0 0)';if(p>=1){clearInterval(holdT);escalateNow('need_help');fill.style.clipPath='inset(100% 0 0 0)';}},40);});
+['pointerup','pointerleave'].forEach(ev=>ring.addEventListener(ev,()=>{clearInterval(holdT);fill.style.clipPath='inset(100% 0 0 0)';}));
+const LANGS=['en','hi','kn'];let li=0;
+const T={en:{greet:"Namaste, Priya",chip:"EN \u00b7 \u0939\u093f \u00b7 \u0c95",hold:"\u0926\u092c\u093e\u0915\u0930 \u0930\u0916\u0947\u0902",state:"SAFE",desc:"Your area looks normal right now. Trail is off.",cTitle:"Are you safe?",cBody:"We noticed a delay. Tap your secret safe digit to confirm."},hi:{greet:"\u0928\u092e\u0938\u094d\u0924\u0947, \u092a\u094d\u0930\u093f\u092f\u093e",chip:"\u0939\u093f \u00b7 \u0c95 \u00b7 EN",hold:"\u0926\u092c\u093e\u0915\u0930 \u0930\u0916\u0947\u0902",state:"\u0938\u0941\u0930\u0915\u094d\u0937\u093f\u0924",desc:"\u0906\u092a\u0915\u093e \u0915\u094d\u0937\u0947\u0924\u094d\u0930 \u0905\u092d\u0940 \u0938\u093e\u092e\u093e\u0928\u094d\u092f \u0926\u093f\u0916 \u0930\u0939\u093e \u0939\u0948\u0964",cTitle:"\u0915\u094d\u092f\u093e \u0906\u092a \u0938\u0941\u0930\u0915\u094d\u0937\u093f\u0924 \u0939\u0948\u0902?",cBody:"\u0926\u0947\u0930\u0940 \u0926\u093f\u0916\u0940 \u0939\u0948\u0964 \u092a\u0941\u0937\u094d\u091f\u093f \u0915\u0947 \u0932\u093f\u090f \u0905\u092a\u0928\u093e \u0917\u0941\u092a\u094d\u0924 \u0905\u0902\u0915 \u0926\u092c\u093e\u090f\u0902\u0964"},kn:{greet:"\u0ca8\u0cae\u0cb8\u0ccd\u0c95\u0cbe\u0cb0, \u0caa\u0ccd\u0cb0\u0cbf\u0caf\u0cbe",chip:"\u0c95 \u00b7 EN \u00b7 \u0939\u093f",hold:"\u0c92\u0ca4\u0ccd\u0ca4\u0cbf \u0cb9\u0cbf\u0ca1\u0cbf\u0caf\u0cbf\u0cb0\u0cbf",state:"\u0cb8\u0cc1\u0cb0\u0c95\u0ccd\u0cb7\u0cbf\u0ca4",desc:"\u0ca8\u0cbf\u0cae\u0ccd\u0cae \u0caa\u0ccd\u0cb0\u0ca6\u0cc7\u0cb6 \u0c88\u0c97 \u0cb8\u0cbe\u0cae\u0cbe\u0ca8\u0ccd\u0caf\u0cb5\u0cbe\u0c97\u0cbf\u0ca6\u0cc6.",cTitle:"\u0ca8\u0cc0\u0cb5\u0cc1 \u0cb8\u0cc1\u0cb0\u0c95\u0ccd\u0cb7\u0cbf\u0ca4\u0cb5\u0cbe\u0c97\u0cbf\u0ca6\u0ccd\u0ca6\u0cc0\u0cb0\u0cbe?",cBody:"\u0cb5\u0cbf\u0cb3\u0c82\u0cac \u0c95\u0c82\u0ca1\u0cc1\u0cac\u0c82\u0ca6\u0cbf\u0ca6\u0cc6. \u0ca6\u0cc3\u0ca2\u0cc0\u0c95\u0cb0\u0cbf\u0cb8\u0cb2\u0cc1 \u0ca8\u0cbf\u0cae\u0ccd\u0cae \u0cb0\u0cb9\u0cb8\u0ccd\u0caf \u0c85\u0c82\u0c95\u0cbf \u0c92\u0ca4\u0ccd\u0ca4\u0cbf."}};
+function cycleLang(){li=(li+1)%3;const t=T[LANGS[li]];$('greetName').textContent=t.greet;$('langChip').textContent=t.chip;$('holdSub').textContent=t.hold;$('homeState').textContent=t.state;$('homeDesc').textContent=t.desc;$('checkTitle').textContent=t.cTitle;$('checkBody').textContent=t.cBody;toast({en:'English',hi:'\u0939\u093f\u0928\u094d\u0926\u0940',kn:'\u0c95\u0ca8\u0ccd\u0ca8\u0ca1'}[LANGS[li]]);}
+</script>
+</body>
+</html>
